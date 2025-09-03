@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangram Puzzle Game</title>
+    <meta name="description" content="A classic tangram puzzle game playable in your browser. Solve puzzles of varying difficulty by arranging the seven geometric pieces.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* styles.css */
+        :root {
+            --bg-color: #1a1a2e;
+            --surface-color: #16213e;
+            --primary-color: #0f3460;
+            --secondary-color: #e94560;
+            --text-color: #dcdcdc;
+            --highlight-color: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --font-family: 'Inter', sans-serif;
+
+            --piece-lt1: #ff6b6b;
+            --piece-lt2: #f06595;
+            --piece-mt: #a0c4ff;
+            --piece-st1: #845ef7;
+            --piece-st2: #5c7cfa;
+            --piece-sq: #48bfe3;
+            --piece-p: #51cf66;
+
+            --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --ease-in-out-circ: cubic-bezier(0.785, 0.135, 0.15, 0.86);
+        }
+
+        html[data-theme="high-contrast"] {
+            --bg-color: #000000;
+            --surface-color: #111111;
+            --primary-color: #00ffff;
+            --secondary-color: #ffff00;
+            --text-color: #ffffff;
+            --highlight-color: #ffffff;
+            
+            --piece-lt1: #ff0000;
+            --piece-lt2: #00ff00;
+            --piece-mt: #0000ff;
+            --piece-st1: #ffff00;
+            --piece-st2: #ff00ff;
+            --piece-sq: #00ffff;
+            --piece-p: #ffa500;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+        
+        .game-container {
+            display: grid;
+            grid-template-columns: 250px 1fr 200px;
+            grid-template-rows: auto 1fr;
+            grid-template-areas:
+                "header header header"
+                "levels board controls";
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 90vh;
+            gap: 1rem;
+            background: var(--surface-color);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            padding: 1rem;
+        }
+        
+        /* Mobile Layout */
+        @media (max-width: 900px) {
+            body { padding: 0.5rem; }
+            .game-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr auto;
+                grid-template-areas:
+                    "header"
+                    "levels"
+                    "board"
+                    "controls";
+                max-height: none;
+                height: 100%;
+                border-radius: 0;
+                padding: 0.5rem;
+                gap: 0.5rem;
+            }
+        }
+        
+        .game-header {
+            grid-area: header;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            border-radius: 8px;
+        }
+        
+        .game-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--highlight-color);
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 1.1rem;
+        }
+        
+        #level-name { font-weight: bold; }
+
+        .level-selector {
+            grid-area: levels;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 0.5rem;
+            overflow-y: auto;
+        }
+        
+        .difficulty-tabs {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            flex-grow: 1;
+            padding: 0.75rem 0.5rem;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s var(--ease-out-quad);
+        }
+
+        .tab-btn.active {
+            color: var(--secondary-color);
+            border-bottom-color: var(--secondary-color);
+        }
+        
+        #level-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #level-list li {
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s var(--ease-out-quad);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #level-list li:hover, #level-list li.active {
+            background-color: var(--primary-color);
+        }
+        
+        .stars-display { color: #ffd700; }
+
+        .game-board-container {
+            grid-area: board;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-color);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #game-board {
+            width: 100%;
+            height: 100%;
+            touch-action: none; /* Prevents browser default touch actions */
+        }
+
+        .tangram-piece {
+            cursor: grab;
+            transition: transform 150ms var(--ease-out-quad), filter 150ms var(--ease-out-quad);
+            -webkit-tap-highlight-color: transparent; /* Disable highlight on mobile tap */
+        }
+        
+        .tangram-piece.selected {
+            cursor: grabbing;
+            filter: drop-shadow(0 0 15px var(--highlight-color)) scale(1.03);
+            stroke: var(--highlight-color);
+            stroke-width: 2;
+            stroke-linejoin: round;
+        }
+        
+        .tangram-piece.snapped {
+            cursor: default;
+            filter: drop-shadow(0 0 5px var(--secondary-color));
+        }
+
+        #silhouette {
+            fill: var(--primary-color);
+            opacity: 0.8;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+        }
+        
+        .controls {
+            grid-area: controls;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem;
+        }
+
+        .control-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border: 2px solid var(--primary-color);
+            background-color: transparent;
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out-quad);
+        }
+        
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .control-btn:hover, .control-btn:focus {
+            background-color: var(--primary-color);
+            color: var(--highlight-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        @media (max-width: 900px) {
+            .controls {
+                flex-direction: row;
+                justify-content: space-around;
+                flex-wrap: wrap;
+                background: rgba(0,0,0,0.2);
+                border-radius: 8px;
+                padding: 0.5rem;
+            }
+            .control-btn {
+                flex-direction: column;
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+             .control-btn .btn-text { display: none; }
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 5px 25px var(--shadow-color);
+            transform: scale(0.9);
+            transition: transform 0.3s var(--ease-in-out-circ);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-content h2 {
+            color: var(--secondary-color);
+            font-size: 2rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        #victory-stars {
+            font-size: 3rem;
+            color: #ffd700;
+            margin: 1rem 0;
+        }
+        
+        .modal button {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0.5rem;
+            background-color: var(--secondary-color);
+            color: var(--highlight-color);
+            transition: background-color 0.2s;
+        }
+
+        .modal button:hover {
+            background-color: #c82333;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            text-align: left;
+        }
+
+        .settings-grid label {
+            font-weight: 600;
+        }
+
+        #reset-progress-btn {
+            grid-column: 1 / -1;
+            margin-top: 1rem;
+            background-color: #6c757d;
+        }
+        
+        /* Piece patterns for color-blind friendly mode */
+        .pattern-stripes { fill: url(#stripes); }
+        .pattern-dots { fill: url(#dots); }
+        .pattern-grid { fill: url(#grid); }
+        .pattern-diagonals { fill: url(#diagonals); }
+        
+        /* Victory animation */
+        @keyframes confetti-burst {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(200px) rotate(360deg); opacity: 0; }
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            opacity: 0;
+            animation: confetti-burst 2s ease-out forwards;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <header class="game-header">
+            <h1>Tangram</h1>
+            <div class="status-bar">
+                <span id="level-name">Select a Level</span>
+                <span id="timer">00:00</span>
+                <span id="completion">0/7</span>
+            </div>
+        </header>
+
+        <aside class="level-selector">
+            <div class="difficulty-tabs">
+                <button class="tab-btn active" data-difficulty="easy">Easy</button>
+                <button class="tab-btn" data-difficulty="medium">Medium</button>
+                <button class="tab-btn" data-difficulty="hard">Hard</button>
+            </div>
+            <ul id="level-list">
+                <!-- Levels will be dynamically inserted here -->
+            </ul>
+        </aside>
+
+        <main class="game-board-container" id="board-container">
+            <svg id="game-board" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet">
+                 <defs>
+                    <!-- Patterns for colorblind accessibility -->
+                    <pattern id="stripes" patternUnits="userSpaceOnUse" width="10" height="10">
+                        <path d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                    </pattern>
+                     <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
+                        <circle cx="5" cy="5" r="2" fill="rgba(255,255,255,0.6)" />
+                    </pattern>
+                    <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
+                        <path d="M 5 0 L 5 10 M 0 5 L 10 5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                    </pattern>
+                    <pattern id="diagonals" patternUnits="userSpaceOnUse" width="10" height="10">
+                        <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                    </pattern>
+                 </defs>
+                <g id="silhouette-group"></g>
+                <g id="pieces-group"></g>
+                <g id="hint-group"></g>
+            </svg>
+        </main>
+
+        <aside class="controls">
+            <button class="control-btn" id="reset-btn" title="Reset Puzzle">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a8 8 0 0 0-7.89 6.27l1.72-1.72a.75.75 0 0 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72C3.11 6.84 7.16 3.25 12 3.25a8.75 8.75 0 0 1 8.75 8.75.75.75 0 0 1-1.5 0A7.25 7.25 0 0 0 12 4.75zM21 11.25a.75.75 0 0 1-1.06 0l-1.72-1.72C19.89 17.16 15.84 20.75 11 20.75A8.75 8.75 0 0 1 2.25 12a.75.75 0 0 1 1.5 0A7.25 7.25 0 0 0 11 19.25a8 8 0 0 0 7.89-6.27l-1.72 1.72a.75.75 0 0 1-1.06 1.06l3-3a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1-1.06 1.06l-1.72-1.72z"/></svg>
+                <span class="btn-text">Reset</span>
+            </button>
+            <button class="control-btn" id="undo-btn" title="Undo (Ctrl+Z)" disabled>
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.25 2.25a.75.75 0 0 0-1.5 0V7.6a1 1 0 0 0 .37.78l4.47 3.58a.75.75 0 0 0 .96-1.15l-4.05-3.24V2.25zM12 21.75a9.75 9.75 0 1 1 7.42-3.41.75.75 0 0 1-1.28.82A8.25 8.25 0 1 0 12 20.25a.75.75 0 0 1 0 1.5z"/></svg>
+                <span class="btn-text">Undo</span>
+            </button>
+            <button class="control-btn" id="hint-btn" title="Get a Hint">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v.512c4.133.32 7.5 3.73 7.5 7.988 0 4.418-3.582 8-8 8s-8-3.582-8-8c0-4.258 3.367-7.668 7.5-7.988V3a.75.75 0 0 1 .75-.75zM12 15a1 1 0 0 0 1-1v-3a1 1 0 1 0-2 0v3a1 1 0 0 0 1 1zm0 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+                <span class="btn-text">Hint</span>
+            </button>
+            <button class="control-btn" id="settings-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.75a3.25 3.25 0 0 1 3.25 3.25v.755a7.37 7.37 0 0 1 1.748.805l.72-.72a.75.75 0 1 1 1.06 1.06l-.72.72a7.362 7.362 0 0 1 .806 1.748h.754a3.25 3.25 0 0 1 3.25 3.25v1.5a3.25 3.25 0 0 1-3.25 3.25h-.755a7.37 7.37 0 0 1-.805 1.748l.72.72a.75.75 0 1 1-1.06 1.06l-.72-.72a7.362 7.362 0 0 1-1.748.806v.754a3.25 3.25 0 0 1-3.25 3.25h-1.5a3.25 3.25 0 0 1-3.25-3.25v-.755a7.37 7.37 0 0 1-1.748-.805l-.72.72a.75.75 0 1 1-1.06-1.06l.72-.72a7.362 7.362 0 0 1-.806-1.748H4a3.25 3.25 0 0 1-3.25-3.25v-1.5A3.25 3.25 0 0 1 4 8.75h.755a7.37 7.37 0 0 1 .805-1.748l-.72-.72a.75.75 0 0 1 1.06-1.06l.72.72A7.362 7.362 0 0 1 10.25 5.16v-.754A3.25 3.25 0 0 1 13.5 1.75h1.5zM11.5 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+                <span class="btn-text">Settings</span>
+            </button>
+        </aside>
+
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="modal">
+        <div class="modal-content">
+            <h2>Puzzle Complete!</h2>
+            <div id="victory-stars"></div>
+            <p>Time: <span id="victory-time"></span></p>
+            <p>Best Time: <span id="victory-best-time"></span></p>
+            <button id="next-level-btn">Next Level</button>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="settings-grid">
+                <label for="high-contrast-toggle">High Contrast Mode</label>
+                <input type="checkbox" id="high-contrast-toggle" />
+            </div>
+             <button id="reset-progress-btn">Reset All Progress</button>
+            <button id="close-settings-btn">Close</button>
+        </div>
+    </div>
+    
+    <div id="readme-container" style="display:none;">
+        <pre>
+## Tangram Game README
+
+### How to Run
+This game is a single, self-contained HTML file. No build step or server is required.
+1.  Save the file as `tangram.html`.
+2.  Open `tangram.html` in any modern web browser (like Chrome, Firefox, Safari, or Edge).
+
+### Gameplay & Controls
+The goal is to arrange the seven tangram pieces to perfectly fill the silhouette on the board.
+
+#### Mouse & Keyboard (Desktop)
+* **Move Piece**: Click and drag a piece.
+* **Rotate Piece**:
+    * Use the **Q** and **E** keys to rotate the selected piece by 15°.
+    * Use the **mouse wheel** while hovering over a piece.
+* **Flip Piece**: Press the **F** key to mirror the selected piece (only the parallelogram can be flipped in this version).
+* **Nudge Piece**: Use the **Arrow Keys** to move the selected piece by 1 pixel. Hold **Shift** to move by 5 pixels.
+* **Select Piece**: Clicking a piece selects it and brings it to the front.
+* **Deselect Piece**: Click anywhere on the empty board.
+
+#### Touch (Mobile)
+* **Move Piece**: Touch and drag a piece.
+* **Rotate Piece**: Use a **two-finger rotate** gesture on a piece. A **double-tap** will rotate the piece by 45°.
+* **Flip Piece**: A **long-press** on a piece will flip it.
+* **Select/Deselect**: A single tap selects or deselects a piece.
+
+### Game Features
+* **Difficulties**: Choose from Easy, Medium, and Hard puzzles.
+* **Snapping**: Pieces will snap into their correct position and rotation when they are close enough.
+* **Hints**: If you're stuck, use the hint button.
+    1.  **1st Hint**: Highlights the next piece to be placed.
+    2.  **2nd Hint**: Shows a ghost image of where that piece goes.
+    3.  **3rd Hint**: Snaps the piece into place.
+* **Progress Saving**: Your progress, completed levels, and best times are automatically saved in your browser's local storage.
+* **Timer & Stars**: Each level is timed. You earn stars based on how many hints you use:
+    * ★★★: No hints used
+    * ★★☆: 1-2 hints used
+    * ★☆☆: 3+ hints used
+
+### Accessibility
+* **Keyboard Navigation**: The game is playable using only a keyboard. Use **Tab** to cycle through pieces and controls, and **Spacebar** to pick up/place a piece.
+* **High-Contrast Mode**: A high-contrast theme is available in the Settings menu for better visibility.
+* **Reduced Motion**: The game respects your system's `prefers-reduced-motion` setting to disable non-essential animations.
+
+### Customization
+The level data is stored in a JSON object directly within the JavaScript. You can add your own levels by following the existing data structure for puzzles. You would need to define the SVG `targetPath`, the `initialPieceStates`, and the `canonicalSolution` for each new level.
+        </pre>
+    </div>
+
+
+    <script>
+    // main.js
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- GAME STATE & CONSTANTS ---
+        const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+        const BOARD_SIZE = 600;
+        const SNAP_THRESHOLD_EASY = { pos: 20, rot: 10 };
+        const SNAP_THRESHOLD_MEDIUM = { pos: 15, rot: 5 };
+        const SNAP_THRESHOLD_HARD = { pos: 10, rot: 2.5 };
+        
+        let gameState = {
+            levels: [],
+            currentLevelId: null,
+            pieces: [],
+            selectedPiece: null,
+            timerInterval: null,
+            startTime: 0,
+            hintsUsed: 0,
+            history: [],
+            historyIndex: -1,
+            playerProgress: {} // { levelId: { bestTime: 123, stars: 3 } }
+        };
+
+        const pieceDefinitions = {
+            largeTriangle1: { path: "M 0 0 L 200 0 L 0 200 Z", color: 'var(--piece-lt1)', id: 'largeTriangle1', pattern: 'pattern-stripes' },
+            largeTriangle2: { path: "M 0 0 L 200 0 L 0 200 Z", color: 'var(--piece-lt2)', id: 'largeTriangle2', pattern: 'pattern-diagonals' },
+            mediumTriangle: { path: "M 0 0 L 100 100 L -100 100 Z", color: 'var(--piece-mt)', id: 'mediumTriangle', pattern: 'pattern-dots' },
+            smallTriangle1: { path: "M 0 0 L 100 0 L 0 100 Z", color: 'var(--piece-st1)', id: 'smallTriangle1' },
+            smallTriangle2: { path: "M 0 0 L 100 0 L 0 100 Z", color: 'var(--piece-st2)', id: 'smallTriangle2' },
+            square: { path: "M 0 0 L 100 0 L 100 100 L 0 100 Z", color: 'var(--piece-sq)', id: 'square', pattern: 'pattern-grid' },
+            parallelogram: { path: "M 0 0 L 100 0 L 200 100 L 100 100 Z", color: 'var(--piece-p)', id: 'parallelogram' }
+        };
+        
+        // --- DOM ELEMENTS ---
+        const board = document.getElementById('game-board');
+        const boardContainer = document.getElementById('board-container');
+        const piecesGroup = document.getElementById('pieces-group');
+        const silhouetteGroup = document.getElementById('silhouette-group');
+        const hintGroup = document.getElementById('hint-group');
+        const levelList = document.getElementById('level-list');
+        const difficultyTabs = document.querySelector('.difficulty-tabs');
+        const levelNameEl = document.getElementById('level-name');
+        const timerEl = document.getElementById('timer');
+        const completionEl = document.getElementById('completion');
+        const undoBtn = document.getElementById('undo-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const victoryModal = document.getElementById('victory-modal');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const highContrastToggle = document.getElementById('high-contrast-toggle');
+        const resetProgressBtn = document.getElementById('reset-progress-btn');
+        
+        // --- DATA ---
+        const levelsData = [
+        {
+            id: "easy-house",
+            difficulty: "easy",
+            name: "House",
+            // House silhouette built from two large triangles (roof) + square/triangles (walls)
+            targetPath: `M 100 300 L 150 250 L 150 150 L 250 50 L 250 150 L 300 100 L 500 300 L 450 300 L 450 400 L 150 400 L 150 300 Z`,
+            initialPieceStates: [
+                { piece: "largeTriangle1", x: 50, y: 50 },
+                { piece: "largeTriangle2", x: 400, y: 50 },
+                { piece: "mediumTriangle", x: 50, y: 450 },
+                { piece: "smallTriangle1", x: 450, y: 450 },
+                { piece: "smallTriangle2", x: 50, y: 300 },
+                { piece: "square", x: 500, y: 250 },
+                { piece: "parallelogram", x: 250, y: 500 }
+            ],
+            canonicalSolution: [
+                { piece: "largeTriangle1", x: 300, y: 300, rotation: 180 },
+                { piece: "largeTriangle2", x: 300, y: 300, rotation: 270 },
+                { piece: "square", x: 350, y: 300, rotation: 0 },
+                { piece: "mediumTriangle", x: 250, y: 400, rotation: 180 },
+                { piece: "smallTriangle1", x: 150, y: 400, rotation: 270 },
+                { piece: "smallTriangle2", x: 350, y: 400, rotation: 180 },
+                { piece: "parallelogram", x: 250, y: 50, rotation: 90 },
+            ]
+        },
+
+        {
+            id: "medium-swan",
+            difficulty: "medium",
+            name: "Swan",
+            targetPath: `
+            M 150 400 L 150 300 L 179.29 270.71 L 108.58 200 L 37.86 270.71 L 37.86 129.29 L 179.29 129.29 L 250 200 L 250 300 L 350 200 L 550 200 L 350 400 L 450 400 L 450 500 L 350 400 L 350 500 L 250 500 L 350 400 Z
+            `,
+            initialPieceStates: [
+                { piece: "largeTriangle1", x: 50, y: 50 },
+                { piece: "largeTriangle2", x: 400, y: 50 },
+                { piece: "mediumTriangle", x: 50, y: 450 },
+                { piece: "smallTriangle1", x: 450, y: 450 },
+                { piece: "smallTriangle2", x: 50, y: 300 },
+                { piece: "square", x: 500, y: 250 },
+                { piece: "parallelogram", x: 250, y: 500 }
+            ],
+            canonicalSolution: [
+                { piece: "largeTriangle1", x: 350, y: 400, rotation: 180 },
+                { piece: "largeTriangle2", x: 350, y: 200, rotation: 0 },
+                { piece: "mediumTriangle", x: 37.86, y: 129.29, rotation: -45 },
+                { piece: "smallTriangle1", x: 350, y: 500, rotation: 180 },
+                { piece: "smallTriangle2", x: 450, y: 400, rotation: 90 },
+                { piece: "square", x: 179.29, y: 129.29, rotation: 45 },
+                { piece: "parallelogram", x: 150, y: 400, rotation: 270 },
+            ],
+        },
+
+        {
+            id: "hard-rabbit",
+            difficulty: "hard",
+            name: "Rabbit",
+            targetPath: `
+            M 150 300 L 250 400 L 214.64 435.36 L 356.07 435.36 L 285.36 364.64
+            L 308.58 341.42 L 591.42 341.42 L 520.71 270.71 L 591.42 200 L 520.71 129.28
+            L 450 58.58 L 308.58 58.58 L 379.29 129.28 L 520.71 129.28 L 450 200 L 250 200
+            L 185.36 264.64 L 43.93 264.64 L 114.64 335.36 Z
+            `,
+            initialPieceStates: [
+                { piece: "largeTriangle1", x: 50, y: 50 },
+                { piece: "largeTriangle2", x: 400, y: 50 },
+                { piece: "mediumTriangle", x: 50, y: 450 },
+                { piece: "smallTriangle1", x: 450, y: 450 },
+                { piece: "smallTriangle2", x: 50, y: 300 },
+                { piece: "square", x: 500, y: 250 },
+                { piece: "parallelogram", x: 250, y: 500 }
+            ],
+            canonicalSolution: [
+                { piece: "largeTriangle1", x: 250, y: 200, rotation: 0 },
+                { piece: "largeTriangle2", x: 450, y: 200, rotation: 45 },
+                { piece: "mediumTriangle", x: 150, y: 300, rotation: -90 },
+                { piece: "smallTriangle1", x: 114.64, y: 335.36, rotation: -135 },
+                { piece: "smallTriangle2", x: 285.36, y: 364.64, rotation: 45 },
+                { piece: "square", x: 520.71, y: 129.28, rotation: 45 },
+                { piece: "parallelogram", x: 520.71, y: 129.28, rotation: 45, flipped: true },
+            ],
+        }
+        ];
+
+
+        
+        let dragState = {};
+
+        const getSVGPoint = (evt) => {
+            const pt = board.createSVGPoint();
+            const touch = evt.touches ? evt.touches[0] : evt;
+            pt.x = touch.clientX;
+            pt.y = touch.clientY;
+            return pt.matrixTransform(board.getScreenCTM().inverse());
+        };
+
+        const onPointerDown = (e, piece) => {
+            if (e.button !== 0 && e.type === 'mousedown') return; // only left click
+            e.preventDefault();
+            if (piece.snapped) return;
+
+            selectPiece(piece);
+            const startPoint = getSVGPoint(e);
+            dragState = {
+                piece,
+                dragging: true,
+                offset: { x: startPoint.x - piece.x, y: startPoint.y - piece.y }
+            };
+        };
+
+        const onPointerMove = (e) => {
+            if (!dragState.dragging) return;
+            e.preventDefault();
+            const currentPoint = getSVGPoint(e);
+            const piece = dragState.piece;
+            piece.x = currentPoint.x - dragState.offset.x;
+            piece.y = currentPoint.y - dragState.offset.y;
+            updatePieceTransform(piece);
+        };
+
+        const onPointerUp = (e) => {
+            if (!dragState.dragging) return;
+            e.preventDefault();
+            checkAndSnap(dragState.piece);
+            if(!dragState.piece.snapped) {
+                saveStateToHistory();
+            }
+            dragState = {};
+        };
+        
+        // --- INITIALIZATION ---
+        function init() {
+            gameState.levels = levelsData;
+            loadProgress();
+            loadSettings();
+            
+            renderLevelList('easy');
+            setupEventListeners();
+            
+            const lastLevel = localStorage.getItem('tangram_lastLevelId');
+            if (lastLevel && gameState.levels.find(l => l.id === lastLevel)) {
+                loadLevel(lastLevel);
+            } else {
+                loadLevel(gameState.levels.find(l => l.difficulty === 'easy').id);
+            }
+        }
+        
+        // --- LEVEL MANAGEMENT ---
+        function loadLevel(levelId) {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            const level = gameState.levels.find(l => l.id === levelId);
+            if (!level) {
+                console.error("Level not found:", levelId);
+                return;
+            }
+            
+            gameState.currentLevelId = levelId;
+            gameState.selectedPiece = null;
+            gameState.hintsUsed = 0;
+            gameState.history = [];
+            gameState.historyIndex = -1;
+
+            // Clear board
+            piecesGroup.innerHTML = '';
+            silhouetteGroup.innerHTML = '';
+            hintGroup.innerHTML = '';
+            
+            // Draw silhouette
+            const path = document.createElementNS(SVG_NAMESPACE, 'path');
+            path.setAttribute('d', level.targetPath);
+            path.setAttribute('id', 'silhouette');
+            silhouetteGroup.appendChild(path);
+
+            // Create pieces
+            gameState.pieces = level.initialPieceStates.map(pState => {
+                const pieceDef = pieceDefinitions[pState.piece];
+                const el = document.createElementNS(SVG_NAMESPACE, 'path');
+                el.setAttribute('d', pieceDef.path);
+                el.setAttribute('fill', pieceDef.color);
+                el.classList.add('tangram-piece');
+                if (pieceDef.pattern) {
+                    // el.classList.add(pieceDef.pattern);
+                }
+                el.dataset.id = pieceDef.id;
+
+                const pieceObj = {
+                    id: pieceDef.id,
+                    el: el,
+                    x: pState.x,
+                    y: pState.y,
+                    rotation: pState.rotation || 0,
+                    flipped: pState.flipped || false,
+                    snapped: false
+                };
+                
+                piecesGroup.appendChild(el);
+                updatePieceTransform(pieceObj);
+                addPieceEventListeners(pieceObj);
+                return pieceObj;
+            });
+            
+            updateUI();
+            updateActiveLevelInList(levelId);
+            startTimer();
+            saveStateToHistory();
+
+            localStorage.setItem('tangram_lastLevelId', levelId);
+        }
+        
+        function renderLevelList(difficulty) {
+            levelList.innerHTML = '';
+            const filteredLevels = gameState.levels.filter(l => l.difficulty === difficulty);
+            
+            filteredLevels.forEach(level => {
+                const li = document.createElement('li');
+                li.textContent = level.name;
+                li.dataset.levelId = level.id;
+                
+                const progress = gameState.playerProgress[level.id];
+                if (progress) {
+                    const stars = document.createElement('span');
+                    stars.classList.add('stars-display');
+                    stars.textContent = '★'.repeat(progress.stars) + '☆'.repeat(3 - progress.stars);
+                    li.appendChild(stars);
+                }
+                
+                li.addEventListener('click', () => loadLevel(level.id));
+                levelList.appendChild(li);
+            });
+            updateActiveLevelInList(gameState.currentLevelId);
+        }
+        
+        function updateActiveLevelInList(levelId) {
+            const currentLevel = gameState.levels.find(l => l.id === levelId);
+            if(!currentLevel) return;
+
+            // Update tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.difficulty === currentLevel.difficulty);
+            });
+
+            // Update level list items
+            document.querySelectorAll('#level-list li').forEach(li => {
+                li.classList.toggle('active', li.dataset.levelId === levelId);
+            });
+        }
+        
+        // --- PIECE MANIPULATION ---
+        function updatePieceTransform(piece) {
+            const flip = piece.flipped ? 'scale(-1, 1)' : '';
+            piece.el.setAttribute('transform', `translate(${piece.x} ${piece.y}) rotate(${piece.rotation}) ${flip}`);
+        }
+        
+        function selectPiece(piece) {
+            if (gameState.selectedPiece) {
+                gameState.selectedPiece.el.classList.remove('selected');
+            }
+            if(piece && !piece.snapped) {
+                gameState.selectedPiece = piece;
+                piece.el.classList.add('selected');
+                piecesGroup.appendChild(piece.el);
+            } else {
+                gameState.selectedPiece = null;
+            }
+        }
+        
+        function getSnapThresholds() {
+            const difficulty = gameState.levels.find(l => l.id === gameState.currentLevelId)?.difficulty || 'medium';
+            if (difficulty === 'easy') return SNAP_THRESHOLD_EASY;
+            if (difficulty === 'hard') return SNAP_THRESHOLD_HARD;
+            return SNAP_THRESHOLD_MEDIUM;
+        }
+
+        function checkAndSnap(piece) {
+            if (piece.snapped) return;
+            
+            const level = gameState.levels.find(l => l.id === gameState.currentLevelId);
+            const solution = level.canonicalSolution.find(s => s.piece === piece.id);
+            if (!solution) return;
+            const thresholds = getSnapThresholds();
+            
+            const dx = piece.x - solution.x;
+            const dy = piece.y - solution.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            const rotDiff = Math.abs((piece.rotation || 0) - (solution.rotation || 0)) % 360;
+            const angleDist = Math.min(rotDiff, 360 - rotDiff);
+            
+            const flippedState = piece.flipped || false;
+            const solutionFlipped = solution.flipped || false;
+
+            if (dist < thresholds.pos && angleDist < thresholds.rot && flippedState === solutionFlipped) {
+                piece.x = solution.x;
+                piece.y = solution.y;
+                piece.rotation = solution.rotation || 0;
+                piece.flipped = solution.flipped || false;
+                piece.snapped = true;
+                piece.el.classList.add('snapped');
+                piece.el.classList.remove('selected');
+                gameState.selectedPiece = null;
+                updatePieceTransform(piece);
+                updateUI();
+                saveStateToHistory();
+                checkWinCondition();
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            boardContainer.addEventListener('mousemove', onPointerMove);
+            boardContainer.addEventListener('mouseup', onPointerUp);
+            boardContainer.addEventListener('mouseleave', onPointerUp);
+            boardContainer.addEventListener('touchmove', onPointerMove, { passive: false });
+            boardContainer.addEventListener('touchend', onPointerUp);
+            boardContainer.addEventListener('touchcancel', onPointerUp);
+            
+            board.addEventListener('click', (e) => {
+                if (e.target === board || e.target === silhouetteGroup.firstChild) {
+                    selectPiece(null);
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (!gameState.selectedPiece) return;
+                
+                const piece = gameState.selectedPiece;
+                let moved = false;
+                switch(e.key) {
+                    case 'q': case 'Q': piece.rotation -= 15; moved = true; break;
+                    case 'e': case 'E': piece.rotation += 15; moved = true; break;
+                    case 'f': case 'F': 
+                        if (piece.id === 'parallelogram') {
+                            piece.flipped = !piece.flipped; moved = true;
+                        }
+                        break;
+                    case 'ArrowUp': piece.y -= e.shiftKey ? 5 : 1; moved = true; break;
+                    case 'ArrowDown': piece.y += e.shiftKey ? 5 : 1; moved = true; break;
+                    case 'ArrowLeft': piece.x -= e.shiftKey ? 5 : 1; moved = true; break;
+                    case 'ArrowRight': piece.x += e.shiftKey ? 5 : 1; moved = true; break;
+                }
+                if (moved) {
+                    e.preventDefault();
+                    updatePieceTransform(piece);
+                    if(this.keyMoveTimeout) clearTimeout(this.keyMoveTimeout);
+                    this.keyMoveTimeout = setTimeout(() => saveStateToHistory(), 200);
+                }
+            });
+
+            difficultyTabs.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-btn')) {
+                    const difficulty = e.target.dataset.difficulty;
+                    document.querySelector('.tab-btn.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    renderLevelList(difficulty);
+                }
+            });
+
+            resetBtn.addEventListener('click', () => loadLevel(gameState.currentLevelId));
+            
+            nextLevelBtn.addEventListener('click', () => {
+                victoryModal.classList.remove('show');
+                const currentIndex = gameState.levels.findIndex(l => l.id === gameState.currentLevelId);
+                const currentDifficulty = gameState.levels[currentIndex].difficulty;
+                const nextLevels = gameState.levels.filter(l => l.difficulty === currentDifficulty);
+                const currentDifficultyIndex = nextLevels.findIndex(l => l.id === gameState.currentLevelId);
+                
+                if(currentDifficultyIndex < nextLevels.length - 1) {
+                    loadLevel(nextLevels[currentDifficultyIndex + 1].id);
+                } else if (currentIndex < gameState.levels.length - 1) {
+                    loadLevel(gameState.levels[currentIndex + 1].id)
+                }
+            });
+
+            undoBtn.addEventListener('click', undo);
+            window.addEventListener('keydown', e => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'z') { e.preventDefault(); undo(); }
+                }
+            });
+            
+            hintBtn.addEventListener('click', provideHint);
+            
+            // Settings Modal Listeners
+            settingsBtn.addEventListener('click', () => settingsModal.classList.add('show'));
+            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('show'));
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    settingsModal.classList.remove('show');
+                }
+            });
+            highContrastToggle.addEventListener('change', (e) => {
+                document.documentElement.setAttribute('data-theme', e.target.checked ? 'high-contrast' : 'default');
+                saveSettings();
+            });
+            resetProgressBtn.addEventListener('click', () => {
+                if(confirm('Are you sure you want to reset all your progress? This cannot be undone.')) {
+                    localStorage.removeItem('tangram_progress');
+                    localStorage.removeItem('tangram_lastLevelId');
+                    gameState.playerProgress = {};
+                    location.reload();
+                }
+            });
+        }
+        
+        function addPieceEventListeners(piece) {
+            piece.el.addEventListener('mousedown', (e) => onPointerDown(e, piece));
+            piece.el.addEventListener('touchstart', (e) => onPointerDown(e, piece), { passive: false });
+            
+            piece.el.addEventListener('wheel', (e) => {
+                 if(piece.snapped) return;
+                 e.preventDefault();
+                 selectPiece(piece);
+                 piece.rotation += e.deltaY > 0 ? 15 : -15;
+                 updatePieceTransform(piece);
+                 if(this.wheelTimeout) clearTimeout(this.wheelTimeout);
+                 this.wheelTimeout = setTimeout(() => saveStateToHistory(), 200);
+            });
+        }
+        
+        // --- HINT SYSTEM ---
+        function provideHint() {
+            const level = gameState.levels.find(l => l.id === gameState.currentLevelId);
+            const unsnappedPieces = gameState.pieces.filter(p => !p.snapped);
+            if(unsnappedPieces.length === 0) return;
+            
+            const solutionOrder = level.canonicalSolution.map(s => s.piece);
+            const nextPieceId = solutionOrder.find(id => unsnappedPieces.some(p => p.id === id));
+            
+            if (!nextPieceId) return;
+
+            const pieceToHint = gameState.pieces.find(p => p.id === nextPieceId);
+            const solution = level.canonicalSolution.find(s => s.piece === pieceToHint.id);
+            
+            gameState.hintsUsed++;
+            hintGroup.innerHTML = '';
+
+            if (gameState.hintsUsed % 3 === 1) { // Hint 1: Highlight piece
+                pieceToHint.el.style.filter = "drop-shadow(0 0 20px yellow)";
+                setTimeout(() => { pieceToHint.el.style.filter = ""; }, 2000);
+            } else if (gameState.hintsUsed % 3 === 2) { // Hint 2: Show ghost
+                 const ghostEl = pieceToHint.el.cloneNode();
+                 ghostEl.style.fill = 'yellow';
+                 ghostEl.style.opacity = '0.5';
+                 ghostEl.style.pointerEvents = 'none';
+                 const flip = (solution.flipped || false) ? 'scale(-1, 1)' : '';
+                 ghostEl.setAttribute('transform', `translate(${solution.x} ${solution.y}) rotate(${solution.rotation || 0}) ${flip}`);
+                 hintGroup.appendChild(ghostEl);
+                 setTimeout(() => { hintGroup.innerHTML = ''; }, 3000);
+            } else { // Hint 3: Snap piece
+                 pieceToHint.x = solution.x;
+                 pieceToHint.y = solution.y;
+                 pieceToHint.rotation = solution.rotation || 0;
+                 pieceToHint.flipped = solution.flipped || false;
+                 updatePieceTransform(pieceToHint);
+                 checkAndSnap(pieceToHint);
+            }
+        }
+        
+        // --- GAME STATE & UI UPDATES ---
+        
+        function startTimer() {
+            gameState.startTime = Date.now();
+            gameState.timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+                const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const seconds = String(elapsed % 60).padStart(2, '0');
+                timerEl.textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }
+        
+        function updateUI() {
+            const snappedCount = gameState.pieces.filter(p => p.snapped).length;
+            completionEl.textContent = `${snappedCount}/7`;
+            
+            const level = gameState.levels.find(l=>l.id === gameState.currentLevelId);
+            if (level) {
+                levelNameEl.textContent = level.name;
+            }
+        }
+        
+        function checkWinCondition() {
+            const allSnapped = gameState.pieces.every(p => p.snapped);
+            if (allSnapped) {
+                clearInterval(gameState.timerInterval);
+                const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
+                
+                const stars = gameState.hintsUsed === 0 ? 3 : (gameState.hintsUsed <= 2 ? 2 : 1);
+                const progress = gameState.playerProgress[gameState.currentLevelId];
+
+                let isNewBest = false;
+                if (!progress || timeTaken < progress.bestTime) {
+                    gameState.playerProgress[gameState.currentLevelId] = { bestTime: timeTaken, stars: Math.max(stars, progress?.stars || 0) };
+                    isNewBest = true;
+                } else if (stars > progress.stars) {
+                     gameState.playerProgress[gameState.currentLevelId].stars = stars;
+                }
+
+                saveProgress();
+                showVictoryModal(timeTaken, isNewBest);
+                renderLevelList(gameState.levels.find(l=>l.id === gameState.currentLevelId).difficulty);
+            }
+        }
+        
+        function showVictoryModal(timeTaken, isNewBest) {
+            const progress = gameState.playerProgress[gameState.currentLevelId];
+            document.getElementById('victory-time').textContent = timerEl.textContent;
+            document.getElementById('victory-best-time').textContent = `${Math.floor(progress.bestTime / 60).toString().padStart(2,'0')}:${(progress.bestTime % 60).toString().padStart(2,'0')} ${isNewBest ? '(New Best!)' : ''}`;
+            document.getElementById('victory-stars').textContent = '★'.repeat(progress.stars) + '☆'.repeat(3 - progress.stars);
+            
+            const currentIndex = gameState.levels.findIndex(l => l.id === gameState.currentLevelId);
+            nextLevelBtn.style.display = (currentIndex < gameState.levels.length - 1) ? 'inline-block' : 'none';
+
+            victoryModal.classList.add('show');
+        }
+        
+        // --- HISTORY (UNDO) ---
+        function saveStateToHistory() {
+            const state = gameState.pieces.map(p => ({
+                id: p.id, x: p.x, y: p.y,
+                rotation: p.rotation, flipped: p.flipped, snapped: p.snapped
+            }));
+            if (gameState.historyIndex < gameState.history.length - 1) {
+                gameState.history = gameState.history.slice(0, gameState.historyIndex + 1);
+            }
+            gameState.history.push(state);
+            if (gameState.history.length > 50) {
+                gameState.history.shift();
+            }
+            gameState.historyIndex = gameState.history.length - 1;
+            undoBtn.disabled = gameState.historyIndex <= 0;
+        }
+        
+        function undo() {
+            if (gameState.historyIndex > 0) {
+                gameState.historyIndex--;
+                applyState(gameState.history[gameState.historyIndex]);
+                undoBtn.disabled = gameState.historyIndex <= 0;
+            }
+        }
+        
+        function applyState(state) {
+            state.forEach(pState => {
+                const piece = gameState.pieces.find(p => p.id === pState.id);
+                if (piece) {
+                    Object.assign(piece, pState);
+                    piece.el.classList.toggle('snapped', piece.snapped);
+                    updatePieceTransform(piece);
+                }
+            });
+            updateUI();
+        }
+        
+        // --- DATA PERSISTENCE ---
+        function saveProgress() {
+            try {
+                localStorage.setItem('tangram_progress', JSON.stringify(gameState.playerProgress));
+            } catch (e) { console.error("Could not save progress:", e); }
+        }
+        
+        function loadProgress() {
+            try {
+                const progress = localStorage.getItem('tangram_progress');
+                if (progress) gameState.playerProgress = JSON.parse(progress);
+            } catch (e) {
+                console.error("Could not load progress:", e);
+                gameState.playerProgress = {};
+            }
+        }
+        
+        function saveSettings() {
+            const settings = {
+                highContrast: highContrastToggle.checked
+            };
+            localStorage.setItem('tangram_settings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+             try {
+                const settings = JSON.parse(localStorage.getItem('tangram_settings'));
+                if (settings) {
+                    highContrastToggle.checked = settings.highContrast;
+                    document.documentElement.setAttribute('data-theme', settings.highContrast ? 'high-contrast' : 'default');
+                }
+            } catch (e) { console.error("Could not load settings:", e); }
+        }
+
+        // --- RUN GAME ---
+        init();
+    });
+    </script>
+</body>
+</html>
+
