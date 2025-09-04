@@ -234,6 +234,10 @@
             filter: drop-shadow(0 0 5px var(--secondary-color));
         }
 
+        .tangram-piece.dragging {
+            transition: none;
+        }
+
         #silhouette {
             fill: var(--primary-color);
             opacity: 0.8;
@@ -518,7 +522,8 @@ Deselect: Click the background.
 --- MOBILE CONTROLS ---
 Move: Touch and drag.
 Rotate: Two-finger rotate gesture.
-Flip: Long-press the piece.
+Double-Tap: Rotate piece 45° clockwise.
+Long-Press: Flip the parallelogram.
 Select/Deselect: Tap a piece.
         </pre>
     </div>
@@ -672,6 +677,10 @@ Select/Deselect: Tap a piece.
         
         let dragState = {};
         let gestureState = {};
+        let longPressTimeout = null;
+        let lastTapInfo = { time: 0, pieceId: null };
+        const DOUBLE_TAP_DELAY = 300; // ms
+        const LONG_PRESS_DELAY = 500; // ms
 
         const getSVGPoint = (evt) => {
             const pt = board.createSVGPoint();
@@ -686,6 +695,7 @@ Select/Deselect: Tap a piece.
             if (piece.snapped) return;
 
             selectPiece(piece);
+            piece.el.classList.add('dragging');
             const startPoint = getSVGPoint(e);
             dragState = {
                 piece,
@@ -705,9 +715,12 @@ Select/Deselect: Tap a piece.
 
         const onPointerUp = (e) => {
             if (dragState.dragging) {
-                checkAndSnap(dragState.piece);
-                if(!dragState.piece.snapped) {
-                    saveStateToHistory();
+                if (dragState.piece) {
+                    dragState.piece.el.classList.remove('dragging');
+                    checkAndSnap(dragState.piece);
+                    if(!dragState.piece.snapped) {
+                        saveStateToHistory();
+                    }
                 }
             }
             dragState = {};
@@ -715,10 +728,15 @@ Select/Deselect: Tap a piece.
         
         // --- MOBILE GESTURE HANDLING ---
         function onTouchStart(e, piece) {
-            if (e.touches.length === 1) {
+            // Definitively block any interaction with a snapped piece.
+            if (piece.snapped) {
                 e.preventDefault();
-                onPointerDown(e, piece);
-            } else if (e.touches.length === 2) {
+                return;
+            }
+
+            // Two-finger rotate gesture
+            if (e.touches.length === 2) {
+                clearTimeout(longPressTimeout); // Cancel any pending tap actions
                 e.preventDefault();
                 selectPiece(piece);
                 dragState = {}; // disable dragging
@@ -734,10 +752,63 @@ Select/Deselect: Tap a piece.
                     initialAngle: Math.atan2(dy, dx) * (180 / Math.PI),
                     startRotation: piece.rotation,
                 };
+                return;
+            }
+
+            // Single-finger gestures (tap, double-tap, long-press, drag)
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                const currentTime = new Date().getTime();
+
+                // Check for double-tap
+                if (currentTime - lastTapInfo.time < DOUBLE_TAP_DELAY && piece.id === lastTapInfo.pieceId) {
+                    clearTimeout(longPressTimeout);
+                    lastTapInfo = { time: 0, pieceId: null }; // Reset tap info
+
+                    if (dragState.piece) {
+                        dragState.piece.el.classList.remove('dragging');
+                    }
+
+                    // Perform 45-degree clockwise rotation
+                    piece.rotation = (piece.rotation + 45) % 360;
+                    updatePieceTransform(piece);
+                    saveStateToHistory();
+                    dragState = {}; // Prevent drag on double tap
+                } else {
+                    // This is a potential single tap, long press, or start of a drag
+                    lastTapInfo = { time: currentTime, pieceId: piece.id };
+                    
+                    // Start long-press timer
+                    longPressTimeout = setTimeout(() => {
+                        if (dragState.dragging) { // Ensure it wasn't a drag
+                            if (piece.id === 'parallelogram') {
+                                 piece.el.classList.remove('dragging');
+                                 piece.flipped = !piece.flipped;
+                                 updatePieceTransform(piece);
+                                 saveStateToHistory();
+                                 dragState = {}; // Prevent dragging after a successful long press
+                            }
+                        }
+                        longPressTimeout = null;
+                    }, LONG_PRESS_DELAY);
+
+                    // Initiate drag immediately
+                    onPointerDown(e, piece);
+                }
             }
         }
 
         function onTouchMove(e) {
+            // If user moves finger significantly, it's a drag, not a long press or tap
+            if(longPressTimeout && dragState.dragging) {
+                const startPoint = getSVGPoint(e);
+                const dist = Math.hypot(startPoint.x - (dragState.piece.x + dragState.offset.x), startPoint.y - (dragState.piece.y + dragState.offset.y));
+                if (dist > 5) { // Threshold to differentiate tap from drag
+                    clearTimeout(longPressTimeout);
+                    longPressTimeout = null;
+                }
+            }
+
             if (gestureState.rotating && e.touches.length === 2) {
                 e.preventDefault();
                 const t1 = e.touches[0];
@@ -751,11 +822,18 @@ Select/Deselect: Tap a piece.
                 piece.rotation = gestureState.startRotation + angleDiff;
                 updatePieceTransform(piece);
             } else {
+                // This handles the single-touch drag
                 onPointerMove(e);
             }
         }
 
         function onTouchEnd(e) {
+            // A finger was lifted, so it's not a long press
+            if(longPressTimeout) {
+                clearTimeout(longPressTimeout);
+                longPressTimeout = null;
+            }
+
             if (gestureState.rotating) {
                 saveStateToHistory();
                 gestureState = {};
