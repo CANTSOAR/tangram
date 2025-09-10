@@ -365,6 +365,24 @@
         .modal button:hover {
             background-color: #c82333;
         }
+        
+        .modal input[type="text"] {
+            padding: 0.75rem;
+            width: 80%;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border: 2px solid var(--primary-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        
+        #netid-error {
+            color: var(--secondary-color);
+            min-height: 1.2em;
+            font-weight: 600;
+        }
 
         .settings-grid {
             display: grid;
@@ -393,6 +411,32 @@
             max-height: 50vh;
             overflow-y: auto;
             font-family: monospace;
+        }
+
+        /* Leaderboard styles */
+        #leaderboard-content h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        #leaderboard-content ol {
+            list-style-type: none;
+            padding: 0;
+        }
+         #leaderboard-content li {
+            display: grid;
+            grid-template-columns: 2fr 3fr 1fr 1fr;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        #leaderboard-content li:nth-child(odd) {
+            background: rgba(0,0,0,0.1);
+        }
+        #leaderboard-content .leaderboard-header {
+            font-weight: bold;
+            color: var(--highlight-color);
         }
         
         /* Piece patterns for color-blind friendly mode */
@@ -444,19 +488,19 @@
         <main class="game-board-container" id="board-container">
             <svg id="game-board" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet">
                  <defs>
-                    <!-- Patterns for colorblind accessibility -->
-                    <pattern id="stripes" patternUnits="userSpaceOnUse" width="10" height="10">
-                        <path d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-                    </pattern>
-                     <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
-                        <circle cx="5" cy="5" r="2" fill="rgba(255,255,255,0.6)" />
-                    </pattern>
-                    <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
-                        <path d="M 5 0 L 5 10 M 0 5 L 10 5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-                    </pattern>
-                    <pattern id="diagonals" patternUnits="userSpaceOnUse" width="10" height="10">
-                        <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-                    </pattern>
+                     <!-- Patterns for colorblind accessibility -->
+                     <pattern id="stripes" patternUnits="userSpaceOnUse" width="10" height="10">
+                         <path d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                     </pattern>
+                      <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
+                         <circle cx="5" cy="5" r="2" fill="rgba(255,255,255,0.6)" />
+                     </pattern>
+                     <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
+                         <path d="M 5 0 L 5 10 M 0 5 L 10 5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                     </pattern>
+                     <pattern id="diagonals" patternUnits="userSpaceOnUse" width="10" height="10">
+                         <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+                     </pattern>
                  </defs>
                 <g id="silhouette-group"></g>
                 <g id="pieces-group"></g>
@@ -468,13 +512,34 @@
             <button class="control-btn" id="reset-btn" title="Reset Puzzle">Reset</button>
             <button class="control-btn" id="undo-btn" title="Undo (Ctrl+Z)" disabled>Undo</button>
             <button class="control-btn" id="hint-btn" title="Get a Hint">Hint</button>
+            <button class="control-btn" id="leaderboard-btn" title="Leaderboard">Leaderboard</button>
             <button class="control-btn" id="instructions-btn" title="How to Play">How to Play</button>
             <button class="control-btn" id="settings-btn" title="Settings">Settings</button>
         </aside>
 
     </div>
 
-    <!-- Victory Modal -->
+    <!-- Modals -->
+    <div id="netid-modal" class="modal show">
+        <div class="modal-content">
+            <h2>Enter Your NetID</h2>
+            <p>Please enter a unique NetID to save your scores to the leaderboard. Format: letters followed by numbers.</p>
+            <input type="text" id="netid-input" placeholder="e.g. am3567" autocomplete="off" />
+            <p id="netid-error"></p>
+            <button id="netid-submit-btn">Start Playing</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2>Leaderboard</h2>
+            <div id="leaderboard-content" style="text-align: left; max-height: 60vh; overflow-y: auto;">
+                <!-- Leaderboard content will be generated here -->
+            </div>
+            <button id="close-leaderboard-btn">Close</button>
+        </div>
+    </div>
+
     <div id="victory-modal" class="modal">
         <div class="modal-content">
             <h2>Puzzle Complete!</h2>
@@ -485,7 +550,6 @@
         </div>
     </div>
     
-    <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <h2>Settings</h2>
@@ -498,7 +562,6 @@
         </div>
     </div>
 
-    <!-- Instructions Modal -->
     <div id="instructions-modal" class="modal">
         <div class="modal-content">
             <h2>How to Play</h2>
@@ -533,6 +596,13 @@ Select/Deselect: Tap a piece.
     // main.js
     document.addEventListener('DOMContentLoaded', () => {
 
+        // --- BACKEND API CONFIGURATION ---
+        const API_ENDPOINT_URL = 'https://tangram-backend.vercel.app/api/update-leaderboard';
+
+        // This URL has been updated with the one you provided.
+        const LEADERBOARD_BLOB_URL = 'https://qfershxgczealf0k.public.blob.vercel-storage.com/leaderboard.json';
+
+
         // --- GAME STATE & CONSTANTS ---
         const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
         const BOARD_SIZE = 600;
@@ -550,7 +620,9 @@ Select/Deselect: Tap a piece.
             hintsUsed: 0,
             history: [],
             historyIndex: -1,
-            playerProgress: {} // { levelId: { bestTime: 123, stars: 3 } }
+            playerProgress: {}, // { levelId: { bestTime: 123, stars: 3 } }
+            leaderboardData: {}, // { levelId: [ {id, time, stars}, ... ] }
+            currentPlayerId: null,
         };
 
         const pieceDefinitions = {
@@ -579,6 +651,9 @@ Select/Deselect: Tap a piece.
         const hintBtn = document.getElementById('hint-btn');
         const settingsBtn = document.getElementById('settings-btn');
         const instructionsBtn = document.getElementById('instructions-btn');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        
+        // Modals
         const victoryModal = document.getElementById('victory-modal');
         const nextLevelBtn = document.getElementById('next-level-btn');
         const settingsModal = document.getElementById('settings-modal');
@@ -588,91 +663,19 @@ Select/Deselect: Tap a piece.
         const instructionsModal = document.getElementById('instructions-modal');
         const closeInstructionsBtn = document.getElementById('close-instructions-btn');
         const instructionsContent = document.getElementById('instructions-content');
+        const netidModal = document.getElementById('netid-modal');
+        const netidInput = document.getElementById('netid-input');
+        const netidSubmitBtn = document.getElementById('netid-submit-btn');
+        const netidError = document.getElementById('netid-error');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+        const leaderboardContent = document.getElementById('leaderboard-content');
 
         // --- DATA ---
         const levelsData = [
-        {
-            id: "easy-house",
-            difficulty: "easy",
-            name: "House",
-            // House silhouette built from two large triangles (roof) + square/triangles (walls)
-            targetPath: `M 100 300 L 150 250 L 150 150 L 250 50 L 250 150 L 300 100 L 500 300 L 450 300 L 450 400 L 150 400 L 150 300 Z`,
-            initialPieceStates: [
-                { piece: "largeTriangle1", x: 50, y: 50 },
-                { piece: "largeTriangle2", x: 400, y: 50 },
-                { piece: "mediumTriangle", x: 50, y: 450 },
-                { piece: "smallTriangle1", x: 450, y: 450 },
-                { piece: "smallTriangle2", x: 50, y: 300 },
-                { piece: "square", x: 500, y: 250 },
-                { piece: "parallelogram", x: 250, y: 500 }
-            ],
-            canonicalSolution: [
-                { piece: "largeTriangle1", x: 300, y: 300, rotation: 180 },
-                { piece: "largeTriangle2", x: 300, y: 300, rotation: 270 },
-                { piece: "square", x: 350, y: 300, rotation: 0 },
-                { piece: "mediumTriangle", x: 250, y: 400, rotation: 180 },
-                { piece: "smallTriangle1", x: 150, y: 400, rotation: 270 },
-                { piece: "smallTriangle2", x: 350, y: 400, rotation: 180 },
-                { piece: "parallelogram", x: 250, y: 50, rotation: 90 },
-            ]
-        },
-
-        {
-            id: "medium-swan",
-            difficulty: "medium",
-            name: "Swan",
-            targetPath: `
-            M 150 400 L 150 300 L 179.29 270.71 L 108.58 200 L 37.86 270.71 L 37.86 129.29 L 179.29 129.29 L 250 200 L 250 300 L 350 200 L 550 200 L 350 400 L 450 400 L 450 500 L 350 400 L 350 500 L 250 500 L 350 400 Z
-            `,
-            initialPieceStates: [
-                { piece: "largeTriangle1", x: 50, y: 50 },
-                { piece: "largeTriangle2", x: 400, y: 50 },
-                { piece: "mediumTriangle", x: 50, y: 450 },
-                { piece: "smallTriangle1", x: 450, y: 450 },
-                { piece: "smallTriangle2", x: 50, y: 300 },
-                { piece: "square", x: 500, y: 250 },
-                { piece: "parallelogram", x: 250, y: 500 }
-            ],
-            canonicalSolution: [
-                { piece: "largeTriangle1", x: 350, y: 400, rotation: 180 },
-                { piece: "largeTriangle2", x: 350, y: 200, rotation: 0 },
-                { piece: "mediumTriangle", x: 37.86, y: 129.29, rotation: -45 },
-                { piece: "smallTriangle1", x: 350, y: 500, rotation: 180 },
-                { piece: "smallTriangle2", x: 450, y: 400, rotation: 90 },
-                { piece: "square", x: 179.29, y: 129.29, rotation: 45 },
-                { piece: "parallelogram", x: 150, y: 400, rotation: 270 },
-            ],
-        },
-
-        {
-            id: "hard-rabbit",
-            difficulty: "hard",
-            name: "Rabbit",
-            targetPath: `
-            M 150 300 L 250 400 L 214.64 435.36 L 356.07 435.36 L 285.36 364.64
-            L 308.58 341.42 L 591.42 341.42 L 520.71 270.71 L 591.42 200 L 520.71 129.28
-            L 450 58.58 L 308.58 58.58 L 379.29 129.28 L 520.71 129.28 L 450 200 L 250 200
-            L 185.36 264.64 L 43.93 264.64 L 114.64 335.36 Z
-            `,
-            initialPieceStates: [
-                { piece: "largeTriangle1", x: 50, y: 50 },
-                { piece: "largeTriangle2", x: 400, y: 50 },
-                { piece: "mediumTriangle", x: 50, y: 450 },
-                { piece: "smallTriangle1", x: 450, y: 450 },
-                { piece: "smallTriangle2", x: 50, y: 300 },
-                { piece: "square", x: 500, y: 250 },
-                { piece: "parallelogram", x: 250, y: 500 }
-            ],
-            canonicalSolution: [
-                { piece: "largeTriangle1", x: 250, y: 200, rotation: 0 },
-                { piece: "largeTriangle2", x: 450, y: 200, rotation: 45 },
-                { piece: "mediumTriangle", x: 150, y: 300, rotation: -90 },
-                { piece: "smallTriangle1", x: 114.64, y: 335.36, rotation: -135 },
-                { piece: "smallTriangle2", x: 285.36, y: 364.64, rotation: 45 },
-                { piece: "square", x: 520.71, y: 129.28, rotation: 45 },
-                { piece: "parallelogram", x: 520.71, y: 129.28, rotation: 45, flipped: true },
-            ],
-        }
+            { id: "easy-house", difficulty: "easy", name: "House", targetPath: `M 100 300 L 150 250 L 150 150 L 250 50 L 250 150 L 300 100 L 500 300 L 450 300 L 450 400 L 150 400 L 150 300 Z`, initialPieceStates: [ { piece: "largeTriangle1", x: 50, y: 50 }, { piece: "largeTriangle2", x: 400, y: 50 }, { piece: "mediumTriangle", x: 50, y: 450 }, { piece: "smallTriangle1", x: 450, y: 450 }, { piece: "smallTriangle2", x: 50, y: 300 }, { piece: "square", x: 500, y: 250 }, { piece: "parallelogram", x: 250, y: 500 } ], canonicalSolution: [ { piece: "largeTriangle1", x: 300, y: 300, rotation: 180 }, { piece: "largeTriangle2", x: 300, y: 300, rotation: 270 }, { piece: "square", x: 350, y: 300, rotation: 0 }, { piece: "mediumTriangle", x: 250, y: 400, rotation: 180 }, { piece: "smallTriangle1", x: 150, y: 400, rotation: 270 }, { piece: "smallTriangle2", x: 350, y: 400, rotation: 180 }, { piece: "parallelogram", x: 250, y: 50, rotation: 90 } ] },
+            { id: "medium-swan", difficulty: "medium", name: "Swan", targetPath: `M 150 400 L 150 300 L 179.29 270.71 L 108.58 200 L 37.86 270.71 L 37.86 129.29 L 179.29 129.29 L 250 200 L 250 300 L 350 200 L 550 200 L 350 400 L 450 400 L 450 500 L 350 400 L 350 500 L 250 500 L 350 400 Z`, initialPieceStates: [ { piece: "largeTriangle1", x: 50, y: 50 }, { piece: "largeTriangle2", x: 400, y: 50 }, { piece: "mediumTriangle", x: 50, y: 450 }, { piece: "smallTriangle1", x: 450, y: 450 }, { piece: "smallTriangle2", x: 50, y: 300 }, { piece: "square", x: 500, y: 250 }, { piece: "parallelogram", x: 250, y: 500 } ], canonicalSolution: [ { piece: "largeTriangle1", x: 350, y: 400, rotation: 180 }, { piece: "largeTriangle2", x: 350, y: 200, rotation: 0 }, { piece: "mediumTriangle", x: 37.86, y: 129.29, rotation: -45 }, { piece: "smallTriangle1", x: 350, y: 500, rotation: 180 }, { piece: "smallTriangle2", x: 450, y: 400, rotation: 90 }, { piece: "square", x: 179.29, y: 129.29, rotation: 45 }, { piece: "parallelogram", x: 150, y: 400, rotation: 270 } ] },
+            { id: "hard-rabbit", difficulty: "hard", name: "Rabbit", targetPath: `M 150 300 L 250 400 L 214.64 435.36 L 356.07 435.36 L 285.36 364.64 L 308.58 341.42 L 591.42 341.42 L 520.71 270.71 L 591.42 200 L 520.71 129.28 L 450 58.58 L 308.58 58.58 L 379.29 129.28 L 520.71 129.28 L 450 200 L 250 200 L 185.36 264.64 L 43.93 264.64 L 114.64 335.36 Z`, initialPieceStates: [ { piece: "largeTriangle1", x: 50, y: 50 }, { piece: "largeTriangle2", x: 400, y: 50 }, { piece: "mediumTriangle", x: 50, y: 450 }, { piece: "smallTriangle1", x: 450, y: 450 }, { piece: "smallTriangle2", x: 50, y: 300 }, { piece: "square", x: 500, y: 250 }, { piece: "parallelogram", x: 250, y: 500 } ], canonicalSolution: [ { piece: "largeTriangle1", x: 250, y: 200, rotation: 0 }, { piece: "largeTriangle2", x: 450, y: 200, rotation: 45 }, { piece: "mediumTriangle", x: 150, y: 300, rotation: -90 }, { piece: "smallTriangle1", x: 114.64, y: 335.36, rotation: -135 }, { piece: "smallTriangle2", x: 285.36, y: 364.64, rotation: 45 }, { piece: "square", x: 520.71, y: 129.28, rotation: 45 }, { piece: "parallelogram", x: 520.71, y: 129.28, rotation: 45, flipped: true } ] }
         ];
         
         let dragState = {};
@@ -728,125 +731,87 @@ Select/Deselect: Tap a piece.
         
         // --- MOBILE GESTURE HANDLING ---
         function onTouchStart(e, piece) {
-            // Definitively block any interaction with a snapped piece.
             if (piece.snapped) {
                 e.preventDefault();
                 return;
             }
-
-            // Two-finger rotate gesture
             if (e.touches.length === 2) {
-                clearTimeout(longPressTimeout); // Cancel any pending tap actions
+                clearTimeout(longPressTimeout);
                 e.preventDefault();
                 selectPiece(piece);
                 dragState = {}; // disable dragging
-
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
                 const dx = t2.clientX - t1.clientX;
                 const dy = t2.clientY - t1.clientY;
-                
-                gestureState = {
-                    piece: piece,
-                    rotating: true,
-                    initialAngle: Math.atan2(dy, dx) * (180 / Math.PI),
-                    startRotation: piece.rotation,
-                };
+                gestureState = { piece, rotating: true, initialAngle: Math.atan2(dy, dx) * (180 / Math.PI), startRotation: piece.rotation };
                 return;
             }
-
-            // Single-finger gestures (tap, double-tap, long-press, drag)
             if (e.touches.length === 1) {
                 e.preventDefault();
                 const currentTime = new Date().getTime();
-
-                // Check for double-tap
                 if (currentTime - lastTapInfo.time < DOUBLE_TAP_DELAY && piece.id === lastTapInfo.pieceId) {
                     clearTimeout(longPressTimeout);
-                    lastTapInfo = { time: 0, pieceId: null }; // Reset tap info
-
+                    lastTapInfo = { time: 0, pieceId: null };
                     if (dragState.piece) {
                         dragState.piece.el.classList.remove('dragging');
                     }
-
-                    // Perform 45-degree clockwise rotation
                     piece.rotation = (piece.rotation + 45) % 360;
                     updatePieceTransform(piece);
                     saveStateToHistory();
-                    dragState = {}; // Prevent drag on double tap
+                    dragState = {};
                 } else {
-                    // This is a potential single tap, long press, or start of a drag
                     lastTapInfo = { time: currentTime, pieceId: piece.id };
-                    
-                    // Start long-press timer
                     longPressTimeout = setTimeout(() => {
-                        if (dragState.dragging) { // Ensure it wasn't a drag
+                        if (dragState.dragging) {
                             if (piece.id === 'parallelogram') {
-                                 piece.el.classList.remove('dragging');
-                                 piece.flipped = !piece.flipped;
-                                 updatePieceTransform(piece);
-                                 saveStateToHistory();
-                                 dragState = {}; // Prevent dragging after a successful long press
+                                piece.el.classList.remove('dragging');
+                                piece.flipped = !piece.flipped;
+                                updatePieceTransform(piece);
+                                saveStateToHistory();
+                                dragState = {};
                             }
                         }
                         longPressTimeout = null;
                     }, LONG_PRESS_DELAY);
-
-                    // Initiate drag immediately
                     onPointerDown(e, piece);
                 }
             }
         }
 
         function onTouchMove(e) {
-            // If user moves finger significantly, it's a drag, not a long press or tap
             if(longPressTimeout && dragState.dragging) {
                 const startPoint = getSVGPoint(e);
                 const dist = Math.hypot(startPoint.x - (dragState.piece.x + dragState.offset.x), startPoint.y - (dragState.piece.y + dragState.offset.y));
-                if (dist > 5) { // Threshold to differentiate tap from drag
-                    clearTimeout(longPressTimeout);
-                    longPressTimeout = null;
-                }
+                if (dist > 5) { clearTimeout(longPressTimeout); longPressTimeout = null; }
             }
-
             if (gestureState.rotating && e.touches.length === 2) {
                 e.preventDefault();
-                const t1 = e.touches[0];
-                const t2 = e.touches[1];
-                const dx = t2.clientX - t1.clientX;
-                const dy = t2.clientY - t1.clientY;
+                const t1 = e.touches[0], t2 = e.touches[1];
+                const dx = t2.clientX - t1.clientX, dy = t2.clientY - t1.clientY;
                 const currentAngle = Math.atan2(dy, dx) * (180 / Math.PI);
                 const angleDiff = currentAngle - gestureState.initialAngle;
-                
-                const piece = gestureState.piece;
-                piece.rotation = gestureState.startRotation + angleDiff;
-                updatePieceTransform(piece);
-            } else {
-                // This handles the single-touch drag
-                onPointerMove(e);
-            }
+                gestureState.piece.rotation = gestureState.startRotation + angleDiff;
+                updatePieceTransform(gestureState.piece);
+            } else { onPointerMove(e); }
         }
 
         function onTouchEnd(e) {
-            // A finger was lifted, so it's not a long press
-            if(longPressTimeout) {
-                clearTimeout(longPressTimeout);
-                longPressTimeout = null;
-            }
-
-            if (gestureState.rotating) {
-                saveStateToHistory();
-                gestureState = {};
-            }
+            if(longPressTimeout) { clearTimeout(longPressTimeout); longPressTimeout = null; }
+            if (gestureState.rotating) { saveStateToHistory(); gestureState = {}; }
             onPointerUp(e);
         }
 
         // --- INITIALIZATION ---
         function init() {
+            promptForNetId();
+        }
+
+        async function initializeGame() {
             gameState.levels = levelsData;
             loadProgress();
             loadSettings();
-            
+            await fetchLeaderboard();
             renderLevelList('easy');
             setupEventListeners();
             
@@ -863,50 +828,30 @@ Select/Deselect: Tap a piece.
             if (gameState.timerInterval) clearInterval(gameState.timerInterval);
             
             const level = gameState.levels.find(l => l.id === levelId);
-            if (!level) {
-                console.error("Level not found:", levelId);
-                return;
-            }
+            if (!level) { console.error("Level not found:", levelId); return; }
             
             gameState.currentLevelId = levelId;
             gameState.selectedPiece = null;
             gameState.hintsUsed = 0;
             gameState.history = [];
             gameState.historyIndex = -1;
-
-            // Clear board
             piecesGroup.innerHTML = '';
             silhouetteGroup.innerHTML = '';
             hintGroup.innerHTML = '';
             
-            // Draw silhouette
             const path = document.createElementNS(SVG_NAMESPACE, 'path');
             path.setAttribute('d', level.targetPath);
             path.setAttribute('id', 'silhouette');
             silhouetteGroup.appendChild(path);
 
-            // Create pieces
             gameState.pieces = level.initialPieceStates.map(pState => {
                 const pieceDef = pieceDefinitions[pState.piece];
                 const el = document.createElementNS(SVG_NAMESPACE, 'path');
                 el.setAttribute('d', pieceDef.path);
                 el.setAttribute('fill', pieceDef.color);
                 el.classList.add('tangram-piece');
-                if (pieceDef.pattern) {
-                    // el.classList.add(pieceDef.pattern);
-                }
                 el.dataset.id = pieceDef.id;
-
-                const pieceObj = {
-                    id: pieceDef.id,
-                    el: el,
-                    x: pState.x,
-                    y: pState.y,
-                    rotation: pState.rotation || 0,
-                    flipped: pState.flipped || false,
-                    snapped: false
-                };
-                
+                const pieceObj = { id: pieceDef.id, el: el, x: pState.x, y: pState.y, rotation: pState.rotation || 0, flipped: pState.flipped || false, snapped: false };
                 piecesGroup.appendChild(el);
                 updatePieceTransform(pieceObj);
                 addPieceEventListeners(pieceObj);
@@ -917,7 +862,6 @@ Select/Deselect: Tap a piece.
             updateActiveLevelInList(levelId);
             startTimer();
             saveStateToHistory();
-
             localStorage.setItem('tangram_lastLevelId', levelId);
         }
         
@@ -948,12 +892,9 @@ Select/Deselect: Tap a piece.
             const currentLevel = gameState.levels.find(l => l.id === levelId);
             if(!currentLevel) return;
 
-            // Update tabs
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.difficulty === currentLevel.difficulty);
             });
-
-            // Update level list items
             document.querySelectorAll('#level-list li').forEach(li => {
                 li.classList.toggle('active', li.dataset.levelId === levelId);
             });
@@ -1021,12 +962,9 @@ Select/Deselect: Tap a piece.
         
         // --- EVENT LISTENERS ---
         function setupEventListeners() {
-            // Desktop listeners
             boardContainer.addEventListener('mousemove', onPointerMove);
             boardContainer.addEventListener('mouseup', onPointerUp);
             boardContainer.addEventListener('mouseleave', onPointerUp);
-
-            // Mobile Listeners
             boardContainer.addEventListener('touchmove', onTouchMove, { passive: false });
             boardContainer.addEventListener('touchend', onTouchEnd);
             boardContainer.addEventListener('touchcancel', onTouchEnd);
@@ -1094,27 +1032,27 @@ Select/Deselect: Tap a piece.
 
             undoBtn.addEventListener('click', undo);
             window.addEventListener('keydown', e => {
-                if (e.ctrlKey || e.metaKey) {
-                    if (e.key === 'z') { e.preventDefault(); undo(); }
-                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
             });
             
             hintBtn.addEventListener('click', provideHint);
             
-            // Settings Modal Listeners
+            // Modals
             settingsBtn.addEventListener('click', () => settingsModal.classList.add('show'));
             closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('show'));
-            settingsModal.addEventListener('click', (e) => {
-                if (e.target === settingsModal) {
-                    settingsModal.classList.remove('show');
-                }
-            });
+            settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) { settingsModal.classList.remove('show'); }});
+            
+            leaderboardBtn.addEventListener('click', () => { renderLeaderboard(); leaderboardModal.classList.add('show'); });
+            closeLeaderboardBtn.addEventListener('click', () => leaderboardModal.classList.remove('show'));
+            leaderboardModal.addEventListener('click', (e) => { if (e.target === leaderboardModal) { leaderboardModal.classList.remove('show'); }});
+
             highContrastToggle.addEventListener('change', (e) => {
                 document.documentElement.setAttribute('data-theme', e.target.checked ? 'high-contrast' : 'default');
                 saveSettings();
             });
             resetProgressBtn.addEventListener('click', () => {
-                if(confirm('Are you sure you want to reset all your progress? This cannot be undone.')) {
+                // This only resets local progress, not the server leaderboard.
+                if(confirm('Are you sure you want to reset all your local progress (stars, best times)? This cannot be undone.')) {
                     localStorage.removeItem('tangram_progress');
                     localStorage.removeItem('tangram_lastLevelId');
                     gameState.playerProgress = {};
@@ -1122,20 +1060,12 @@ Select/Deselect: Tap a piece.
                 }
             });
             
-            // Instructions Modal Listeners
             instructionsBtn.addEventListener('click', () => {
-                const readmeText = document.querySelector('#readme-container pre').textContent;
-                instructionsContent.textContent = readmeText;
+                instructionsContent.textContent = document.querySelector('#readme-container pre').textContent;
                 instructionsModal.classList.add('show');
             });
-            closeInstructionsBtn.addEventListener('click', () => {
-                instructionsModal.classList.remove('show');
-            });
-            instructionsModal.addEventListener('click', (e) => {
-                if (e.target === instructionsModal) {
-                    instructionsModal.classList.remove('show');
-                }
-            });
+            closeInstructionsBtn.addEventListener('click', () => instructionsModal.classList.remove('show'));
+            instructionsModal.addEventListener('click', (e) => { if (e.target === instructionsModal) { instructionsModal.classList.remove('show'); }});
         }
         
         function addPieceEventListeners(piece) {
@@ -1170,25 +1100,22 @@ Select/Deselect: Tap a piece.
             gameState.hintsUsed++;
             hintGroup.innerHTML = '';
 
-            if (gameState.hintsUsed % 3 === 1) { // Hint 1: Highlight piece
+            if (gameState.hintsUsed % 3 === 1) {
                 pieceToHint.el.style.filter = "drop-shadow(0 0 20px yellow)";
                 setTimeout(() => { pieceToHint.el.style.filter = ""; }, 2000);
-            } else if (gameState.hintsUsed % 3 === 2) { // Hint 2: Show ghost
-                 const ghostEl = pieceToHint.el.cloneNode();
-                 ghostEl.style.fill = 'yellow';
-                 ghostEl.style.opacity = '0.5';
-                 ghostEl.style.pointerEvents = 'none';
-                 const flip = (solution.flipped || false) ? 'scale(-1, 1)' : '';
-                 ghostEl.setAttribute('transform', `translate(${solution.x} ${solution.y}) rotate(${solution.rotation || 0}) ${flip}`);
-                 hintGroup.appendChild(ghostEl);
-                 setTimeout(() => { hintGroup.innerHTML = ''; }, 3000);
-            } else { // Hint 3: Snap piece
-                 pieceToHint.x = solution.x;
-                 pieceToHint.y = solution.y;
-                 pieceToHint.rotation = solution.rotation || 0;
-                 pieceToHint.flipped = solution.flipped || false;
-                 updatePieceTransform(pieceToHint);
-                 checkAndSnap(pieceToHint);
+            } else if (gameState.hintsUsed % 3 === 2) {
+                const ghostEl = pieceToHint.el.cloneNode();
+                ghostEl.style.fill = 'yellow'; ghostEl.style.opacity = '0.5'; ghostEl.style.pointerEvents = 'none';
+                const flip = (solution.flipped || false) ? 'scale(-1, 1)' : '';
+                ghostEl.setAttribute('transform', `translate(${solution.x} ${solution.y}) rotate(${solution.rotation || 0}) ${flip}`);
+                hintGroup.appendChild(ghostEl);
+                setTimeout(() => { hintGroup.innerHTML = ''; }, 3000);
+            } else {
+                pieceToHint.x = solution.x; pieceToHint.y = solution.y;
+                pieceToHint.rotation = solution.rotation || 0;
+                pieceToHint.flipped = solution.flipped || false;
+                updatePieceTransform(pieceToHint);
+                checkAndSnap(pieceToHint);
             }
         }
         
@@ -1209,14 +1136,13 @@ Select/Deselect: Tap a piece.
             completionEl.textContent = `${snappedCount}/7`;
             
             const level = gameState.levels.find(l=>l.id === gameState.currentLevelId);
-            if (level) {
-                levelNameEl.textContent = level.name;
-            }
+            if (level) { levelNameEl.textContent = level.name; }
         }
         
-        function checkWinCondition() {
+        async function checkWinCondition() {
             const allSnapped = gameState.pieces.every(p => p.snapped);
             if (allSnapped) {
+                console.log("Win condition met! Preparing to submit score.");
                 clearInterval(gameState.timerInterval);
                 const timeTaken = Math.floor((Date.now() - gameState.startTime) / 1000);
                 
@@ -1230,7 +1156,8 @@ Select/Deselect: Tap a piece.
                 } else if (stars > progress.stars) {
                      gameState.playerProgress[gameState.currentLevelId].stars = stars;
                 }
-
+                
+                await submitScoreToLeaderboard(timeTaken, stars);
                 saveProgress();
                 showVictoryModal(timeTaken, isNewBest);
                 renderLevelList(gameState.levels.find(l=>l.id === gameState.currentLevelId).difficulty);
@@ -1251,17 +1178,12 @@ Select/Deselect: Tap a piece.
         
         // --- HISTORY (UNDO) ---
         function saveStateToHistory() {
-            const state = gameState.pieces.map(p => ({
-                id: p.id, x: p.x, y: p.y,
-                rotation: p.rotation, flipped: p.flipped, snapped: p.snapped
-            }));
+            const state = gameState.pieces.map(p => ({ id: p.id, x: p.x, y: p.y, rotation: p.rotation, flipped: p.flipped, snapped: p.snapped }));
             if (gameState.historyIndex < gameState.history.length - 1) {
                 gameState.history = gameState.history.slice(0, gameState.historyIndex + 1);
             }
             gameState.history.push(state);
-            if (gameState.history.length > 50) {
-                gameState.history.shift();
-            }
+            if (gameState.history.length > 50) { gameState.history.shift(); }
             gameState.historyIndex = gameState.history.length - 1;
             undoBtn.disabled = gameState.historyIndex <= 0;
         }
@@ -1286,27 +1208,170 @@ Select/Deselect: Tap a piece.
             updateUI();
         }
         
+        // --- NETID & LEADERBOARD ---
+        function promptForNetId() {
+            const savedId = localStorage.getItem('tangram_netid');
+            if (savedId) {
+                gameState.currentPlayerId = savedId;
+                netidModal.classList.remove('show');
+                initializeGame();
+                return;
+            }
+
+            const handleIdSubmission = () => {
+                const id = netidInput.value.trim();
+                const validFormat = /^[a-zA-Z]+[0-9]+$/.test(id);
+                if (id && validFormat) {
+                    gameState.currentPlayerId = id;
+                    localStorage.setItem('tangram_netid', id);
+                    netidModal.classList.remove('show');
+                    initializeGame();
+                } else {
+                    netidError.textContent = 'Invalid format. Use letters then numbers (e.g., am3567).';
+                }
+            }
+            netidSubmitBtn.addEventListener('click', handleIdSubmission);
+            netidInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleIdSubmission();
+            });
+        }
+        
+        async function fetchLeaderboard() {
+            if (LEADERBOARD_BLOB_URL.includes('<your-unique-hash-goes-here>')) {
+                console.warn("Leaderboard fetch skipped: Using placeholder URL. Please complete a game to get your real URL.");
+                gameState.leaderboardData = {};
+                return;
+            }
+
+            try {
+                const response = await fetch(LEADERBOARD_BLOB_URL);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                       console.log("Leaderboard not found on server, starting fresh.");
+                       gameState.leaderboardData = {};
+                       return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                gameState.leaderboardData = await response.json();
+            } catch (e) {
+                console.error("Could not fetch leaderboard data:", e);
+                gameState.leaderboardData = {};
+            }
+        }
+
+        async function updateLeaderboard(data) {
+             try {
+                const response = await fetch(API_ENDPOINT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) throw new Error(`API request failed with status: ${response.status}`);
+                
+                const responseData = await response.json();
+                console.log('Leaderboard updated on server.', responseData);
+                
+                if (responseData.url) {
+                    console.log('%cIMPORTANT: Your permanent leaderboard URL is:', 'color: yellow; font-size: 1.2em; font-weight: bold;');
+                    console.log(`%c${responseData.url}`, 'color: cyan; font-size: 1.1em;');
+                    console.log('%cCopy this URL and paste it into the LEADERBOARD_BLOB_URL constant in your HTML file.', 'color: yellow; font-weight: bold;');
+                }
+
+            } catch (error) {
+                console.error('Failed to update leaderboard on server:', error);
+                if (error instanceof TypeError && error.message.toLowerCase().includes('failed to fetch')) {
+                     console.error(
+                        '%cFETCH ERROR HINT: This usually means your backend API at ' + API_ENDPOINT_URL + ' is not configured for CORS. The browser is blocking the request for security reasons. Please check your Vercel API file and ensure it returns "Access-Control-Allow-Origin" headers.',
+                        'color: orange; font-size: 1.1em; font-weight: bold;'
+                    );
+                }
+            }
+        }
+
+        async function submitScoreToLeaderboard(time, stars) {
+            if (!gameState.currentPlayerId) return;
+
+            let levelScores = gameState.leaderboardData[gameState.currentLevelId] || [];
+            const playerExistingScore = levelScores.find(s => s.id === gameState.currentPlayerId);
+
+            const isNewBest = !playerExistingScore || time < playerExistingScore.time || (time === playerExistingScore.time && stars > playerExistingScore.stars);
+
+            if (isNewBest) {
+                console.log("New best score! Submitting to leaderboard.");
+                const otherScores = levelScores.filter(s => s.id !== gameState.currentPlayerId);
+                const newScore = { id: gameState.currentPlayerId, time, stars };
+                const updatedScores = [...otherScores, newScore];
+                
+                updatedScores.sort((a, b) => {
+                    if (a.time !== b.time) return a.time - b.time;
+                    return b.stars - a.stars;
+                });
+                
+                gameState.leaderboardData[gameState.currentLevelId] = updatedScores;
+                await updateLeaderboard(gameState.leaderboardData);
+            } else {
+                console.log("Score was not a new best. Not submitting.");
+            }
+        }
+        
+        function renderLeaderboard() {
+            leaderboardContent.innerHTML = '';
+            ['easy', 'medium', 'hard'].forEach(difficulty => {
+                const section = document.createElement('div');
+                section.innerHTML = `<h3>${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</h3>`;
+                
+                const header = `<li class="leaderboard-header">
+                    <span>Level</span><span>NetID</span><span>Time</span><span>Stars</span>
+                </li>`;
+
+                const levelsForDifficulty = gameState.levels.filter(l => l.difficulty === difficulty);
+                let contentHtml = '';
+
+                levelsForDifficulty.forEach(level => {
+                    const scores = gameState.leaderboardData[level.id] || [];
+                    if (scores.length > 0) {
+                       scores.slice(0, 10).forEach(score => { // Show top 10 per level
+                            const minutes = String(Math.floor(score.time / 60)).padStart(2, '0');
+                            const seconds = String(score.time % 60).padStart(2, '0');
+                            const starDisplay = '★'.repeat(score.stars);
+                            contentHtml += `<li>
+                                <span>${level.name}</span>
+                                <span>${score.id}</span>
+                                <span>${minutes}:${seconds}</span>
+                                <span class="stars-display">${starDisplay}</span>
+                            </li>`;
+                       });
+                    }
+                });
+
+                if (contentHtml) {
+                    section.innerHTML += `<ol>${header}${contentHtml}</ol>`;
+                } else {
+                    section.innerHTML += `<p>No scores recorded for this difficulty yet.</p>`;
+                }
+                leaderboardContent.appendChild(section);
+            });
+        }
+
+
         // --- DATA PERSISTENCE ---
         function saveProgress() {
-            try {
-                localStorage.setItem('tangram_progress', JSON.stringify(gameState.playerProgress));
-            } catch (e) { console.error("Could not save progress:", e); }
+            try { localStorage.setItem('tangram_progress', JSON.stringify(gameState.playerProgress)); } catch (e) { console.error("Could not save progress:", e); }
         }
         
         function loadProgress() {
             try {
                 const progress = localStorage.getItem('tangram_progress');
                 if (progress) gameState.playerProgress = JSON.parse(progress);
-            } catch (e) {
-                console.error("Could not load progress:", e);
-                gameState.playerProgress = {};
-            }
+            } catch (e) { console.error("Could not load progress:", e); gameState.playerProgress = {}; }
         }
         
         function saveSettings() {
-            const settings = {
-                highContrast: highContrastToggle.checked
-            };
+            // FIX: Corrected variable name from highToggle to highContrastToggle
+            const settings = { highContrast: highContrastToggle.checked };
             localStorage.setItem('tangram_settings', JSON.stringify(settings));
         }
 
