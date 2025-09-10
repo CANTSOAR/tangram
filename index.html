@@ -378,7 +378,7 @@
             text-align: center;
         }
         
-        #netid-error {
+        #name-error {
             color: var(--secondary-color);
             min-height: 1.2em;
             font-weight: 600;
@@ -520,13 +520,13 @@
     </div>
 
     <!-- Modals -->
-    <div id="netid-modal" class="modal show">
+    <div id="name-modal" class="modal show">
         <div class="modal-content">
-            <h2>Enter Your NetID</h2>
-            <p>Please enter a unique NetID to save your scores to the leaderboard. Format: letters followed by numbers.</p>
-            <input type="text" id="netid-input" placeholder="e.g. am3567" autocomplete="off" />
-            <p id="netid-error"></p>
-            <button id="netid-submit-btn">Start Playing</button>
+            <h2>Enter Your Name</h2>
+            <p>Please enter a name to save your scores to the leaderboard.</p>
+            <input type="text" id="name-input" placeholder="Your Name" autocomplete="off" />
+            <p id="name-error"></p>
+            <button id="name-submit-btn">Start Playing</button>
         </div>
     </div>
 
@@ -622,7 +622,7 @@ Select/Deselect: Tap a piece.
             historyIndex: -1,
             playerProgress: {}, // { levelId: { bestTime: 123, stars: 3 } }
             leaderboardData: {}, // { levelId: [ {id, time, stars}, ... ] }
-            currentPlayerId: null,
+            currentPlayerName: null,
         };
 
         const pieceDefinitions = {
@@ -663,10 +663,10 @@ Select/Deselect: Tap a piece.
         const instructionsModal = document.getElementById('instructions-modal');
         const closeInstructionsBtn = document.getElementById('close-instructions-btn');
         const instructionsContent = document.getElementById('instructions-content');
-        const netidModal = document.getElementById('netid-modal');
-        const netidInput = document.getElementById('netid-input');
-        const netidSubmitBtn = document.getElementById('netid-submit-btn');
-        const netidError = document.getElementById('netid-error');
+        const nameModal = document.getElementById('name-modal');
+        const nameInput = document.getElementById('name-input');
+        const nameSubmitBtn = document.getElementById('name-submit-btn');
+        const nameError = document.getElementById('name-error');
         const leaderboardModal = document.getElementById('leaderboard-modal');
         const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
         const leaderboardContent = document.getElementById('leaderboard-content');
@@ -804,7 +804,7 @@ Select/Deselect: Tap a piece.
 
         // --- INITIALIZATION ---
         function init() {
-            promptForNetId();
+            promptForName();
         }
 
         async function initializeGame() {
@@ -1208,31 +1208,30 @@ Select/Deselect: Tap a piece.
             updateUI();
         }
         
-        // --- NETID & LEADERBOARD ---
-        function promptForNetId() {
-            const savedId = localStorage.getItem('tangram_netid');
-            if (savedId) {
-                gameState.currentPlayerId = savedId;
-                netidModal.classList.remove('show');
+        // --- NAME & LEADERBOARD ---
+        function promptForName() {
+            const savedName = localStorage.getItem('tangram_name');
+            if (savedName) {
+                gameState.currentPlayerName = savedName;
+                nameModal.classList.remove('show');
                 initializeGame();
                 return;
             }
 
-            const handleIdSubmission = () => {
-                const id = netidInput.value.trim();
-                const validFormat = /^[a-zA-Z]+[0-9]+$/.test(id);
-                if (id && validFormat) {
-                    gameState.currentPlayerId = id;
-                    localStorage.setItem('tangram_netid', id);
-                    netidModal.classList.remove('show');
+            const handleNameSubmission = () => {
+                const name = nameInput.value.trim();
+                if (name) {
+                    gameState.currentPlayerName = name;
+                    localStorage.setItem('tangram_name', name);
+                    nameModal.classList.remove('show');
                     initializeGame();
                 } else {
-                    netidError.textContent = 'Invalid format. Use letters then numbers (e.g., am3567).';
+                    nameError.textContent = 'Please enter a name.';
                 }
             }
-            netidSubmitBtn.addEventListener('click', handleIdSubmission);
-            netidInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') handleIdSubmission();
+            nameSubmitBtn.addEventListener('click', handleNameSubmission);
+            nameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleNameSubmission();
             });
         }
         
@@ -1292,22 +1291,24 @@ Select/Deselect: Tap a piece.
         }
 
         async function submitScoreToLeaderboard(time, stars) {
-            if (!gameState.currentPlayerId) return;
+            if (!gameState.currentPlayerName) return;
 
             let levelScores = gameState.leaderboardData[gameState.currentLevelId] || [];
-            const playerExistingScore = levelScores.find(s => s.id === gameState.currentPlayerId);
+            const playerExistingScore = levelScores.find(s => s.id === gameState.currentPlayerName);
 
-            const isNewBest = !playerExistingScore || time < playerExistingScore.time || (time === playerExistingScore.time && stars > playerExistingScore.stars);
+            // A new score is "best" if it has more stars, or same stars with a better (lower) time.
+            const isNewBest = !playerExistingScore || stars > playerExistingScore.stars || (stars === playerExistingScore.stars && time < playerExistingScore.time);
 
             if (isNewBest) {
                 console.log("New best score! Submitting to leaderboard.");
-                const otherScores = levelScores.filter(s => s.id !== gameState.currentPlayerId);
-                const newScore = { id: gameState.currentPlayerId, time, stars };
+                const otherScores = levelScores.filter(s => s.id !== gameState.currentPlayerName);
+                const newScore = { id: gameState.currentPlayerName, time, stars };
                 const updatedScores = [...otherScores, newScore];
                 
+                // New sorting logic: Prioritize stars first (descending), then time (ascending).
                 updatedScores.sort((a, b) => {
-                    if (a.time !== b.time) return a.time - b.time;
-                    return b.stars - a.stars;
+                    if (a.stars !== b.stars) return b.stars - a.stars;
+                    return a.time - b.time;
                 });
                 
                 gameState.leaderboardData[gameState.currentLevelId] = updatedScores;
@@ -1324,7 +1325,7 @@ Select/Deselect: Tap a piece.
                 section.innerHTML = `<h3>${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</h3>`;
                 
                 const header = `<li class="leaderboard-header">
-                    <span>Level</span><span>NetID</span><span>Time</span><span>Stars</span>
+                    <span>Level</span><span>Name</span><span>Time</span><span>Stars</span>
                 </li>`;
 
                 const levelsForDifficulty = gameState.levels.filter(l => l.difficulty === difficulty);
