@@ -1249,6 +1249,10 @@ Select/Deselect: Tap a piece.
                     localStorage.setItem('tangram_name', name);
                     nameModal.classList.remove('show');
                     initializeGame();
+                    
+                    // Show instructions for the first time user
+                    instructionsContent.textContent = document.querySelector('#readme-container pre').textContent;
+                    instructionsModal.classList.add('show');
                 } else {
                     nameError.textContent = 'Please enter a name.';
                 }
@@ -1417,3 +1421,4 @@ Select/Deselect: Tap a piece.
     </script>
 </body>
 </html>
+
