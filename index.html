@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tangram Puzzle Game</title>
     <meta name="description" content="A classic tangram puzzle game playable in your browser. Solve puzzles of varying difficulty by arranging the seven geometric pieces.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap)" rel="stylesheet">
     <style>
         /* styles.css */
         :root {
@@ -416,12 +416,6 @@
         .settings-grid label {
             font-weight: 600;
         }
-
-        #reset-progress-btn {
-            grid-column: 1 / -1;
-            margin-top: 1rem;
-            background-color: #6c757d;
-        }
         
         #instructions-content {
             text-align: left;
@@ -536,6 +530,7 @@
             <button class="control-btn" id="leaderboard-btn" title="Leaderboard">Leaderboard</button>
             <button class="control-btn" id="instructions-btn" title="How to Play">How to Play</button>
             <button class="control-btn" id="settings-btn" title="Settings">Settings</button>
+            <button class="control-btn" id="restart-btn" title="Restart Game">Restart Game</button>
         </aside>
 
     </div>
@@ -579,8 +574,18 @@
                 <label for="high-contrast-toggle">High Contrast Mode</label>
                 <input type="checkbox" id="high-contrast-toggle" />
             </div>
-             <button id="reset-progress-btn">Reset All Progress</button>
             <button id="close-settings-btn">Close</button>
+        </div>
+    </div>
+
+    <div id="restart-confirm-modal" class="modal">
+        <div class="modal-content">
+            <h2>Restart Game?</h2>
+            <p>This will clear your name and all local progress (best times and stars). Leaderboard scores will not be affected.</p>
+            <div>
+                <button id="restart-confirm-yes" style="background-color: var(--secondary-color);">Yes, Restart</button>
+                <button id="restart-confirm-no" style="background-color: #6c757d;">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -619,14 +624,14 @@ Select/Deselect: Tap a piece.
     document.addEventListener('DOMContentLoaded', () => {
 
         // --- BACKEND API CONFIGURATION ---
-        const API_ENDPOINT_URL = 'https://tangram-backend.vercel.app/api/update-leaderboard';
+        const API_ENDPOINT_URL = '[https://tangram-backend.vercel.app/api/update-leaderboard](https://tangram-backend.vercel.app/api/update-leaderboard)';
 
         // This URL has been updated with the one you provided.
-        const LEADERBOARD_BLOB_URL = 'https://qfershxgczealf0k.public.blob.vercel-storage.com/leaderboard.json';
+        const LEADERBOARD_BLOB_URL = '[https://qfershxgczealf0k.public.blob.vercel-storage.com/leaderboard.json](https://qfershxgczealf0k.public.blob.vercel-storage.com/leaderboard.json)';
 
 
         // --- GAME STATE & CONSTANTS ---
-        const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+        const SVG_NAMESPACE = "[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)";
         const BOARD_SIZE = 600;
         const SNAP_THRESHOLD_EASY = { pos: 20, rot: 10 };
         const SNAP_THRESHOLD_MEDIUM = { pos: 15, rot: 5 };
@@ -674,6 +679,7 @@ Select/Deselect: Tap a piece.
         const settingsBtn = document.getElementById('settings-btn');
         const instructionsBtn = document.getElementById('instructions-btn');
         const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const restartBtn = document.getElementById('restart-btn');
         
         // Modals
         const victoryModal = document.getElementById('victory-modal');
@@ -682,7 +688,6 @@ Select/Deselect: Tap a piece.
         const settingsModal = document.getElementById('settings-modal');
         const closeSettingsBtn = document.getElementById('close-settings-btn');
         const highContrastToggle = document.getElementById('high-contrast-toggle');
-        const resetProgressBtn = document.getElementById('reset-progress-btn');
         const instructionsModal = document.getElementById('instructions-modal');
         const closeInstructionsBtn = document.getElementById('close-instructions-btn');
         const instructionsContent = document.getElementById('instructions-content');
@@ -693,6 +698,10 @@ Select/Deselect: Tap a piece.
         const leaderboardModal = document.getElementById('leaderboard-modal');
         const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
         const leaderboardContent = document.getElementById('leaderboard-content');
+        const restartConfirmModal = document.getElementById('restart-confirm-modal');
+        const restartConfirmYes = document.getElementById('restart-confirm-yes');
+        const restartConfirmNo = document.getElementById('restart-confirm-no');
+
 
         // --- DATA ---
         const levelsData = [
@@ -1074,15 +1083,20 @@ Select/Deselect: Tap a piece.
                 document.documentElement.setAttribute('data-theme', e.target.checked ? 'high-contrast' : 'default');
                 saveSettings();
             });
-            resetProgressBtn.addEventListener('click', () => {
-                // This only resets local progress, not the server leaderboard.
-                if(confirm('Are you sure you want to reset all your local progress (stars, best times)? This cannot be undone.')) {
-                    localStorage.removeItem('tangram_progress');
-                    localStorage.removeItem('tangram_lastLevelId');
-                    gameState.playerProgress = {};
-                    location.reload();
-                }
+
+            restartBtn.addEventListener('click', () => {
+                restartConfirmModal.classList.add('show');
             });
+            restartConfirmNo.addEventListener('click', () => {
+                restartConfirmModal.classList.remove('show');
+            });
+            restartConfirmYes.addEventListener('click', () => {
+                localStorage.removeItem('tangram_name');
+                localStorage.removeItem('tangram_progress');
+                localStorage.removeItem('tangram_lastLevelId');
+                location.reload();
+            });
+
             
             instructionsBtn.addEventListener('click', () => {
                 instructionsContent.textContent = document.querySelector('#readme-container pre').textContent;
@@ -1267,7 +1281,9 @@ Select/Deselect: Tap a piece.
             }
 
             try {
-                const response = await fetch(LEADERBOARD_BLOB_URL);
+                // Add a cache-busting query parameter
+                const cacheBustedUrl = `${LEADERBOARD_BLOB_URL}?t=${new Date().getTime()}`;
+                const response = await fetch(cacheBustedUrl);
                 if (!response.ok) {
                     if (response.status === 404) {
                        console.log("Leaderboard not found on server, starting fresh.");
@@ -1416,4 +1432,5 @@ Select/Deselect: Tap a piece.
     </script>
 </body>
 </html>
+", adding a restart game button
 
